@@ -17,6 +17,9 @@ def get_timestamp():
 def make_file_name(f):
     return f + '_' + get_timestamp() + '.svg'
 
+def make_numbered_file_name(f, k):
+    return f + '_' + str(k) + '_' + get_timestamp() + '.svg'
+
 
 # POLYGONS
 

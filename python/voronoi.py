@@ -17,4 +17,4 @@ color_bounds4 = {"start": (255, 0, 0), "end": (120, 240, 0) }
 
 drawing.black_and_white('bw', 3000)
 drawing.color('color', 3000, bounds, perimeter_bounds, color_bounds1)
-drawing.random_walk_drawing('rw' , 3000, bounds, perimeter_bounds, color_bounds1, color_bounds2, color_bounds3, color_bounds4 )
+drawing.random_walk_drawings('rw' , 20, 3000, bounds, perimeter_bounds, color_bounds1, color_bounds2, color_bounds3, color_bounds4 )
