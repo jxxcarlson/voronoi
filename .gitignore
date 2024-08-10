@@ -1,2 +1,11 @@
 .DS_Store
 env/
+images/
+portfolio/
+images_in/
+images_out/
+portfolio-old/
+python/__pycache__/
+python/refrigerator/
+bessel.py
+stuff/

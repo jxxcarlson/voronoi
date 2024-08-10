@@ -135,10 +135,10 @@ def voronoi_to_svg(points, size, aspect_ratio, output_path):
     dwg.save()
     print(f"Voronoi SVG saved as {output_path}")
 
-def plot_voronoi(points, size, aspect_ratio):
+def plot_voronoi(points, size, aspect_ratio, output_path):
     # Compute Voronoi tessellation
     vor = Voronoi(points)
-    print("plotting voronoi, cells: ", len(vor.regions))
+    print("Plotting voronoi, cells: ", len(vor.regions))
 
     print("Voronoi cells: ", len(vor.regions))
   
@@ -152,7 +152,7 @@ def plot_voronoi(points, size, aspect_ratio):
     
     # Plot points
     # plt.scatter(points[:, 0], points[:, 1], s=1)
-    print("plotting points: ", len(points))
+    print("Plotting points: ", len(points))
     
     # Set limits and aspect ratio
     plt.xlim(0, size)
@@ -163,11 +163,11 @@ def plot_voronoi(points, size, aspect_ratio):
     plt.axis('off')
     
     # Save the plot
-    plt.savefig('images/voronoi_plot.png', dpi=300, bbox_inches='tight', pad_inches=0)
-    print("Voronoi plot saved as images/voronoi_plot.png")
+    plt.savefig(output_path, dpi=300, bbox_inches='tight', pad_inches=0)
+    print("Voronoi plot saved as " + output_path)
     
     # Display the plot
-    plt.show()
+    # plt.show()
 
 
 def plot_voronoi_color(points, colors, size, aspect_ratio, output_path):
@@ -207,14 +207,25 @@ def plot_voronoi_color(points, colors, size, aspect_ratio, output_path):
     dwg.save()
     print(f"Colored Voronoi SVG saved as {output_path}")
 
-def main(file_path):
+def get_file_prefix(file_path):
+    return os.path.splitext(file_path)[0]
+
+def get_file_name(file_path):
+    return os.path.splitext(os.path.basename(file_path))[0]
+
+  
+
+def main(file_path, n_voronoi_cells, chunk_size):
     # Check if the file exists
     if not os.path.exists(file_path):
         print(f"Error: The file '{file_path}' does not exist.")
         return
+    
 
+    file_name = get_file_name(file_path)
+    image_out_prefix = 'images_out'
     # Create the 'images' directory if it doesn't exist
-    os.makedirs('images', exist_ok=True)
+    os.makedirs(image_out_prefix, exist_ok=True)
 
     hsb_matrix = png_to_hsb_matrix(file_path)
 
@@ -222,18 +233,19 @@ def main(file_path):
     print(f"Shape of HSB matrix: {hsb_matrix.shape}")
 
     # Chunk the HSB matrix with a chunk size of 128x128
-    chunk_size = 1
+    # chunk_size = 32
     chunked_hsb_matrix = chunk_hsb_matrix(hsb_matrix, chunk_size)
 
     # Print the shape of the chunked HSB matrix
     print(f"Shape of chunked HSB matrix: {chunked_hsb_matrix.shape}")
 
     # Save the chunked HSB matrix as a PNG
-    output_path = 'images/chunked_image.png'
+    output_path = image_out_prefix + '/' + file_name + '_chunked.png'
     hsb_matrix_to_png(chunked_hsb_matrix, output_path, upscale_factor=chunk_size)
 
     # Generate random points
-    N = 32000  # Number of trial points
+    # N = 32000  # Number of trial points
+    N = n_voronoi_cells
     size = 1000  # Width of the rectangle R
     random_points, random_points_colors = generate_random_points_with_color(chunked_hsb_matrix, N, size, lambda x: x)
 
@@ -242,19 +254,26 @@ def main(file_path):
 
     # Create and plot Voronoi diagram
     print("Creating Voronoi diagram (plot)...")
-    plot_voronoi(random_points, size, aspect_ratio)
+    output_path = image_out_prefix + '/' + file_name + '_voronoi.png'
+    plot_voronoi(random_points, size, aspect_ratio, output_path)
 
     # Generate SVG Voronoi diagram
     print("Creating Voronoi diagram (svg)...")
-    voronoi_to_svg(random_points, size, aspect_ratio, 'images/voronoi_diagram.svg')
+    output_path = image_out_prefix + '/' + file_name + '_voronoi.svg'
+    voronoi_to_svg(random_points, size, aspect_ratio, output_path)
 
     # Create and save colored Voronoi diagram as SVG
     print("Creating colored Voronoi diagram (svg)...")
-    plot_voronoi_color(random_points, random_points_colors, size, aspect_ratio, 'images/voronoi_diagram_colored.svg')
+    output_path = image_out_prefix + '/' + file_name + '_voronoi_color.svg'
+    plot_voronoi_color(random_points, random_points_colors, size, aspect_ratio, output_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Voronoi diagrams from an image.")
     parser.add_argument("file_path", help="Path to the input image file")
+    parser.add_argument("n_voronoi_cells", help="Number of voronoi cells")
+    parser.add_argument("chunk_size", help="Size of chunks")
+
+
     args = parser.parse_args()
 
-    main(args.file_path)
+    main(args.file_path, int(args.n_voronoi_cells), int(args.chunk_size))
