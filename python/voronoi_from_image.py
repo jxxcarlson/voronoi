@@ -241,6 +241,43 @@ def clip_line_to_bbox(p1, p2, bbox):
         (x1 + t2 * (x2 - x1), y1 + t2 * (y2 - y1))
     ]
 
+def plot_voronoi_color(points, colors, size, aspect_ratio, output_path):
+    # Compute Voronoi tessellation
+    vor = Voronoi(points)
+
+    # Create SVG drawing
+    dwg = svgwrite.Drawing(output_path, size=(f'{size}px', f'{size/aspect_ratio}px'))
+
+    # Create a background rectangle
+    dwg.add(dwg.rect(insert=(0, 0), size=(f'{size}px', f'{size/aspect_ratio}px'), fill='white'))
+
+    # Create a dictionary to map points to colors
+    point_to_color = {tuple(point[:2]): color[2:5] for point, color in zip(points, colors)}
+
+    # Plot colored Voronoi cells
+    print("Colored voronoi cells: ", len(vor.regions))
+    for region in vor.regions:
+        if not -1 in region and len(region) > 0:
+            polygon = vor.vertices[region]
+            if len(polygon) > 2:  # Ensure the polygon has at least 3 points
+                # Find the point that corresponds to this region
+                region_point = vor.points[vor.point_region == vor.regions.index(region)][0]
+                h, s, v = point_to_color.get(tuple(region_point), (0, 0, 1))  # Default to white if not found
+                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, v)]
+                color = svgwrite.rgb(r, g, b)
+                dwg.add(dwg.polygon(points=polygon, fill=color, stroke='none'))
+
+    # Plot Voronoi edges
+    for simplex in vor.ridge_vertices:
+        if -1 not in simplex:
+            start = vor.vertices[simplex[0]]
+            end = vor.vertices[simplex[1]]
+            dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5, stroke_opacity=0.5))
+
+    # Save the SVG
+    dwg.save()
+    print(f"Colored Voronoi SVG saved as {output_path}")
+
 def plot_voronoi_color2(points, colors, size, aspect_ratio, output_path):
     print("\n\nBefore processing:")
     print(f"Number of points: {len(points)}")
@@ -292,6 +329,46 @@ def plot_voronoi_color2(points, colors, size, aspect_ratio, output_path):
             clipped_line = clip_line_to_bbox(start, end, bbox)
             if clipped_line:
                 dwg.add(dwg.line(start=clipped_line[0], end=clipped_line[1], stroke='black', stroke_width=0.5, stroke_opacity=0.5))
+
+    # Save the SVG
+    dwg.save()
+    print(f"Colored Voronoi SVG saved as {output_path}")
+
+def plot_voronoi_color3(points, colors, size, aspect_ratio, output_path):
+       # Compute Voronoi tessellation
+    vor = Voronoi(points)
+
+    # Create SVG drawing
+    dwg = svgwrite.Drawing(output_path, size=(f'{size}px', f'{size/aspect_ratio}px'))
+
+    # Create a background rectangle
+    dwg.add(dwg.rect(insert=(0, 0), size=(f'{size}px', f'{size/aspect_ratio}px'), fill='white'))
+
+    # Create a dictionary to map points to colors
+    point_to_color = {tuple(point[:2]): color[2:5] for point, color in zip(points, colors)}
+
+    # Plot colored Voronoi cells
+    print("Colored voronoi cells: ", len(vor.regions))
+    bbox = (0, 0, size, size/aspect_ratio)
+    for region in vor.regions:
+        if not -1 in region and len(region) > 0:
+            polygon = vor.vertices[region]
+            if len(polygon) > 2 and all((bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]) for x, y in polygon):
+                # Ensure the polygon has at least 3 points and that the polygon lies in the bounding box
+                # Find the point that corresponds to this region
+                region_point = vor.points[vor.point_region == vor.regions.index(region)][0]
+                h, s, v = point_to_color.get(tuple(region_point), (0, 0, 1))  # Default to white if not found
+                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, v)]
+                color = svgwrite.rgb(r, g, b)
+                dwg.add(dwg.polygon(points=polygon, fill=color, stroke='none'))
+
+    # Plot Voronoi edges
+    for simplex in vor.ridge_vertices:
+        if -1 not in simplex:
+            start = vor.vertices[simplex[0]]
+            end = vor.vertices[simplex[1]]
+            if all((bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]) for x, y in (start, end)):
+              dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5, stroke_opacity=0.5))
 
     # Save the SVG
     dwg.save()
@@ -377,7 +454,7 @@ def main(file_path, n_voronoi_cells, chunk_size):
     # Create and save colored Voronoi diagram as SVG
     print("Creating colored Voronoi diagram (svg)...")
     output_path = image_out_prefix + '/' + file_name + '_voronoi_color.svg'
-    plot_voronoi_color2(random_points, random_points_colors, size, aspect_ratio, output_path)
+    plot_voronoi_color3(random_points, random_points_colors, size, aspect_ratio, output_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Voronoi diagrams from an image.")
