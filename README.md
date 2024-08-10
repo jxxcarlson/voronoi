@@ -13,6 +13,21 @@ $ open voronoi_color_4g.svg
 $ deactivate
 ```
 
+# Setting up
+
+```
+python -m venv myenv
+source myenv/bin/activate
+pip install PACKAGE
+```
+# Managing
+
+```
+pip list
+pip freeze >requirements.txt
+pip install -r requirements.txt
+```
+
 # Dependencies
 
 ```
