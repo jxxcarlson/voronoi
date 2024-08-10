@@ -127,214 +127,7 @@ def remove_points_outside_bbox(points, bbox):
     
     return points_inside, kept_indices
 
-def clip_polygon_to_bbox(polygon, bbox):
-    """Clip a polygon to a bounding box."""
-    xmin, ymin, xmax, ymax = bbox
-    
-    def clip_line(p1, p2):
-        """Clip a line segment to the bounding box using Cohen-Sutherland algorithm."""
-        x1, y1 = p1
-        x2, y2 = p2
-        
-        def compute_code(x, y):
-            code = 0
-            if x < xmin: code |= 1
-            elif x > xmax: code |= 2
-            if y < ymin: code |= 4
-            elif y > ymax: code |= 8
-            return code
-        
-        code1 = compute_code(x1, y1)
-        code2 = compute_code(x2, y2)
-        
-        while True:
-            if not (code1 | code2):  # Both points inside
-                return [(x1, y1), (x2, y2)]
-            elif code1 & code2:  # Both points outside
-                return None
-            else:
-                code = code1 if code1 else code2
-                if code & 1:
-                    x = xmin
-                    y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1)
-                elif code & 2:
-                    x = xmax
-                    y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1)
-                elif code & 4:
-                    y = ymin
-                    x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1)
-                elif code & 8:
-                    y = ymax
-                    x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1)
-                
-                if code == code1:
-                    x1, y1 = x, y
-                    code1 = compute_code(x1, y1)
-                else:
-                    x2, y2 = x, y
-                    code2 = compute_code(x2, y2)
-    
-    clipped = []
-    for i in range(len(polygon)):
-        line = clip_line(polygon[i], polygon[(i+1) % len(polygon)])
-        if line:
-            clipped.extend(line)
-    
-    return clipped
-
-def clip_line_to_bbox(p1, p2, bbox):
-    """Clip a line segment to a bounding box."""
-    xmin, ymin, xmax, ymax = bbox
-    x1, y1 = p1
-    x2, y2 = p2
-    
-    def clip(p, q, edge):
-        if edge == 0 and q <= p:
-            return True
-        elif edge == 1 and q >= p:
-            return True
-        elif edge == 2 and q <= p:
-            return True
-        elif edge == 3 and q >= p:
-            return True
-        return False
-
-    def intersect(p1, p2, edge):
-        if edge == 0:
-            return (xmin, y1 + (y2 - y1) * (xmin - x1) / (x2 - x1))
-        elif edge == 1:
-            return (xmax, y1 + (y2 - y1) * (xmax - x1) / (x2 - x1))
-        elif edge == 2:
-            return (x1 + (x2 - x1) * (ymin - y1) / (y2 - y1), ymin)
-        elif edge == 3:
-            return (x1 + (x2 - x1) * (ymax - y1) / (y2 - y1), ymax)
-
-    inside1 = (xmin <= x1 <= xmax and ymin <= y1 <= ymax)
-    inside2 = (xmin <= x2 <= xmax and ymin <= y2 <= ymax)
-
-    if inside1 and inside2:
-        return [p1, p2]
-
-    t1, t2 = 0, 1
-    for edge in range(4):
-        p = [-x1, x1, -y1, y1][edge]
-        q = [-x2, x2, -y2, y2][edge]
-        r = [-xmin, xmax, -ymin, ymax][edge]
-
-        if p == q and p > r:
-            return None
-
-        t = (r - p) / (q - p) if p != q else float('inf')
-
-        if p < q:
-            if t > t1:
-                t1 = t
-        else:
-            if t < t2:
-                t2 = t
-
-    if t1 > t2:
-        return None
-
-    return [
-        (x1 + t1 * (x2 - x1), y1 + t1 * (y2 - y1)),
-        (x1 + t2 * (x2 - x1), y1 + t2 * (y2 - y1))
-    ]
-
 def plot_voronoi_color(points, colors, size, aspect_ratio, output_path):
-    # Compute Voronoi tessellation
-    vor = Voronoi(points)
-
-    # Create SVG drawing
-    dwg = svgwrite.Drawing(output_path, size=(f'{size}px', f'{size/aspect_ratio}px'))
-
-    # Create a background rectangle
-    dwg.add(dwg.rect(insert=(0, 0), size=(f'{size}px', f'{size/aspect_ratio}px'), fill='white'))
-
-    # Create a dictionary to map points to colors
-    point_to_color = {tuple(point[:2]): color[2:5] for point, color in zip(points, colors)}
-
-    # Plot colored Voronoi cells
-    print("Colored voronoi cells: ", len(vor.regions))
-    for region in vor.regions:
-        if not -1 in region and len(region) > 0:
-            polygon = vor.vertices[region]
-            if len(polygon) > 2:  # Ensure the polygon has at least 3 points
-                # Find the point that corresponds to this region
-                region_point = vor.points[vor.point_region == vor.regions.index(region)][0]
-                h, s, v = point_to_color.get(tuple(region_point), (0, 0, 1))  # Default to white if not found
-                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, v)]
-                color = svgwrite.rgb(r, g, b)
-                dwg.add(dwg.polygon(points=polygon, fill=color, stroke='none'))
-
-    # Plot Voronoi edges
-    for simplex in vor.ridge_vertices:
-        if -1 not in simplex:
-            start = vor.vertices[simplex[0]]
-            end = vor.vertices[simplex[1]]
-            dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5, stroke_opacity=0.5))
-
-    # Save the SVG
-    dwg.save()
-    print(f"Colored Voronoi SVG saved as {output_path}")
-
-def plot_voronoi_color2(points, colors, size, aspect_ratio, output_path):
-    print("\n\nBefore processing:")
-    print(f"Number of points: {len(points)}")
-    min_x, min_y = np.min(points, axis=0)
-    max_x, max_y = np.max(points, axis=0)
-    print(f"Extreme points: ({min_x}, {min_y}) to ({max_x}, {max_y})")
-    
-    # Compute Voronoi tessellation
-    vor = Voronoi(points)
-    print(f"Number of regions: {len(vor.regions)}")
-    print(f"Length of vor.point_region: {len(vor.point_region)}")
-    print(f"Number of colors: {len(colors)}")
-    
-    # Create SVG drawing
-    dwg = svgwrite.Drawing(output_path, size=(f'{size}px', f'{size/aspect_ratio}px'))
-    # Create a background rectangle
-    dwg.add(dwg.rect(insert=(0, 0), size=(f'{size}px', f'{size/aspect_ratio}px'), fill='white'))
-
-    # Define the bounding box
-    bbox = (0, 0, size, size/aspect_ratio)
-
-    # Plot colored Voronoi cells
-    print("Colored voronoi cells: ", len(vor.regions))
-    for i, region in enumerate(vor.regions):
-        if -1 not in region and len(region) > 2:  # Ensure the polygon is valid and has at least 3 points
-            polygon = vor.vertices[region]
-            
-            # Check if any part of the polygon is inside the bounding box
-            if any((bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]) for x, y in polygon):
-                # Clip the polygon to the bounding box
-                clipped_polygon = clip_polygon_to_bbox(polygon, bbox)
-                
-                if len(clipped_polygon) > 2:  # Ensure the clipped polygon is still valid
-                    if i < len(vor.point_region) and vor.point_region[i] < len(colors):
-                        color_data = colors[vor.point_region[i]]
-                        h, s, v = color_data[-3:]  # Last three values are h, s, v
-                        r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, v)]
-                        color = svgwrite.rgb(r, g, b)
-                    else:
-                        # Use a default color (e.g., gray) for regions without a corresponding point
-                        color = svgwrite.rgb(128, 128, 128)
-                    dwg.add(dwg.polygon(points=clipped_polygon, fill=color, stroke='none'))
-
-    # Plot Voronoi edges
-    for ridge in vor.ridge_vertices:
-        if -1 not in ridge:
-            start = vor.vertices[ridge[0]]
-            end = vor.vertices[ridge[1]]
-            clipped_line = clip_line_to_bbox(start, end, bbox)
-            if clipped_line:
-                dwg.add(dwg.line(start=clipped_line[0], end=clipped_line[1], stroke='black', stroke_width=0.5, stroke_opacity=0.5))
-
-    # Save the SVG
-    dwg.save()
-    print(f"Colored Voronoi SVG saved as {output_path}")
-
-def plot_voronoi_color3(points, colors, size, aspect_ratio, output_path):
        # Compute Voronoi tessellation
     vor = Voronoi(points)
 
@@ -377,21 +170,21 @@ def plot_voronoi_color3(points, colors, size, aspect_ratio, output_path):
 def voronoi_to_svg(points, size, aspect_ratio, output_path):
     print("size, size/aspect_ratio: ", size, size/aspect_ratio)
     
-    # Filter points
-    filtered_points, _ = remove_points_outside_bbox(points, (0, 0, size, size/aspect_ratio))
-    
+     
     # Compute Voronoi tessellation with filtered points
-    vor = Voronoi(filtered_points)
+    vor = Voronoi(points)
 
     # Create SVG drawing
     dwg = svgwrite.Drawing(output_path, size=(f'{size}px', f'{size/aspect_ratio}px'))
 
     # Plot ridges
+    bbox = (0, 0, size, size/aspect_ratio)
     for simplex in vor.ridge_vertices:
         if -1 not in simplex:
             start = vor.vertices[simplex[0]]
             end = vor.vertices[simplex[1]]
-            dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5))
+            if all((bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]) for x, y in (start, end)):
+              dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5, stroke_opacity=0.5))
 
     # Save the SVG
     dwg.save()
@@ -454,7 +247,7 @@ def main(file_path, n_voronoi_cells, chunk_size):
     # Create and save colored Voronoi diagram as SVG
     print("Creating colored Voronoi diagram (svg)...")
     output_path = image_out_prefix + '/' + file_name + '_voronoi_color.svg'
-    plot_voronoi_color3(random_points, random_points_colors, size, aspect_ratio, output_path)
+    plot_voronoi_color(random_points, random_points_colors, size, aspect_ratio, output_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Voronoi diagrams from an image.")
