@@ -3,6 +3,7 @@ from PIL import Image
 import colorsys
 import matplotlib.pyplot as plt
 from scipy.spatial import Voronoi
+import svgwrite
 
 def png_to_hsb_matrix(file_path):
     # Open the image file
@@ -56,7 +57,6 @@ def generate_random_points(hsb_matrix, N, size):
     aspect_ratio = columns / rows
     
     # Create the rectangle R
-    aspect_ratio = columns / rows
     width = size
     height = size / aspect_ratio
     
@@ -82,11 +82,28 @@ def generate_random_points(hsb_matrix, N, size):
     
     return np.array(RP)
 
+def voronoi_to_svg(points, size, aspect_ratio, output_path):
+    # Compute Voronoi tessellation
+    vor = Voronoi(points)
+
+    # Create SVG drawing
+    dwg = svgwrite.Drawing(output_path, size=(f'{size}px', f'{size/aspect_ratio}px'))
+
+    # Plot ridges
+    for simplex in vor.ridge_vertices:
+        if -1 not in simplex:
+            start = vor.vertices[simplex[0]]
+            end = vor.vertices[simplex[1]]
+            dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5))
+
+    # Save the SVG
+    dwg.save()
+    print(f"Voronoi SVG saved as {output_path}")
 
 def plot_voronoi(points, size, aspect_ratio):
     # Compute Voronoi tessellation
     vor = Voronoi(points)
-
+  
     # Plot
     fig, ax = plt.subplots(figsize=(10, 10))
     
@@ -113,9 +130,6 @@ def plot_voronoi(points, size, aspect_ratio):
     # Display the plot
     plt.show()
 
-######################
-
-
 # Example usage
 file_path = 'images/klee.png'
 hsb_matrix = png_to_hsb_matrix(file_path)
@@ -123,10 +137,7 @@ hsb_matrix = png_to_hsb_matrix(file_path)
 # Print the shape of the HSB matrix
 print(f"Shape of HSB matrix: {hsb_matrix.shape}")
 
-# Print the shape of the original HSB matrix
-print(f"Shape of original HSB matrix: {hsb_matrix.shape}")
-
-# Chunk the HSB matrix with a chunk size of 32x32
+# Chunk the HSB matrix with a chunk size of 128x128
 chunk_size = 128
 chunked_hsb_matrix = chunk_hsb_matrix(hsb_matrix, chunk_size)
 
@@ -142,19 +153,12 @@ N = 1000  # Number of trial points
 size = 1000  # Width of the rectangle R
 random_points = generate_random_points(chunked_hsb_matrix, N, size)
 
-# Display the points using matplotlib
-# plt.figure(figsize=(10, 10))
-# plt.scatter(random_points[:, 0], random_points[:, 1], s=1, alpha=0.5)
-# plt.title(f"Random Points Based on HSB Matrix (N={N})")
-# plt.xlabel("X")
-# plt.ylabel("Y")
-# plt.gca().set_aspect('equal', adjustable='box')
-# plt.show()
-
-# # Save the plot as an image
-# plt.savefig('images/random_points_plot.png')
-# print("Plot saved as images/random_points_plot.png")
+# Calculate aspect ratio
+aspect_ratio = chunked_hsb_matrix.shape[1] / chunked_hsb_matrix.shape[0]
 
 # Create and plot Voronoi diagram
 print("Creating Voronoi diagram...")
-plot_voronoi(random_points, size, 1.2)
+plot_voronoi(random_points, size, aspect_ratio)
+
+# Generate SVG Voronoi diagram
+voronoi_to_svg(random_points, size, aspect_ratio, 'images/voronoi_diagram.svg')
