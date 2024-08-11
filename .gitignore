@@ -2,7 +2,6 @@
 env/
 images/
 portfolio/
-images_in/
 images_out/
 portfolio-old/
 python/__pycache__/
