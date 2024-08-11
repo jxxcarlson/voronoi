@@ -173,28 +173,50 @@ def plot_voronoi_color(points, colors, size, aspect_ratio, svg_output_path, png_
     # Create a dictionary to map points to colors
     point_to_color = {tuple(point[:2]): color[2:5] for point, color in zip(points, colors)}
 
+    region_colors = {}
+
     # Plot colored Voronoi cells
     print("Colored voronoi cells: ", len(vor.regions))
     bbox = (0, 0, size, size/aspect_ratio)
-    for region in vor.regions:
+    for i, region in enumerate(vor.regions):
         if not -1 in region and len(region) > 0:
             polygon = vor.vertices[region]
             if len(polygon) > 2 and all((bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]) for x, y in polygon):
-                # Ensure the polygon has at least 3 points and that the polygon lies in the bounding box
                 # Find the point that corresponds to this region
-                region_point = vor.points[vor.point_region == vor.regions.index(region)][0]
+                region_point = vor.points[vor.point_region == i][0]
                 h, s, v = point_to_color.get(tuple(region_point), (0, 0, 1))  # Default to white if not found
+                
+                # Store the HSV color for this region
+                region_colors[i] = (h, s, v)
+                
+                # Convert HSV to RGB for SVG
                 r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, v)]
                 color = svgwrite.rgb(r, g, b)
-                dwg.add(dwg.polygon(points=polygon, fill=color, stroke='none'))
+                dwg.add(dwg.polygon(points=polygon, fill=color, stroke=color, stroke_width=0.5))
 
-    # Plot Voronoi edges
-    for simplex in vor.ridge_vertices:
+
+     # Plot Voronoi edges with colors
+    for simplex, ridge_points in zip(vor.ridge_vertices, vor.ridge_points):
         if -1 not in simplex:
             start = vor.vertices[simplex[0]]
             end = vor.vertices[simplex[1]]
             if all((bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]) for x, y in (start, end)):
-              dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5, stroke_opacity=0.5))
+                # Find the regions on either side of this ridge
+                region1, region2 = ridge_points
+                # Use the color of the first region
+                h, s, v = region_colors.get(vor.point_region[region1], (0, 0, 1))
+                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, 1)]
+                edge_color = svgwrite.rgb(r, g, b)
+                dwg.add(dwg.line(start=start, end=end, stroke=edge_color, stroke_width=0.5))
+
+
+    # # Plot Voronoi edges
+    # for simplex in vor.ridge_vertices:
+    #     if -1 not in simplex:
+    #         start = vor.vertices[simplex[0]]
+    #         end = vor.vertices[simplex[1]]
+    #         if all((bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]) for x, y in (start, end)):
+    #           dwg.add(dwg.line(start=start, end=end, stroke='black', stroke_width=0.5, stroke_opacity=0.5))
 
     # Sav√e the SVG
     dwg.save()
@@ -214,6 +236,7 @@ def voronoi_to_svg(points, size, aspect_ratio, svg_output_path, png_output_path)
 
     # Plot ridges
     bbox = (0, 0, size, size/aspect_ratio)
+    print("Aspect ratio: ", aspect_ratio)
     for simplex in vor.ridge_vertices:
         if -1 not in simplex:
             start = vor.vertices[simplex[0]]
