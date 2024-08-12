@@ -6,6 +6,19 @@ Experiments in generating interesting Voronoi decompositions using Python.
 
 Current directory = `~/dev/generative/voronoi`
 
+Execute something like this:
+
+```
+python python/mosaic_from_image.py images_in/kandinsky-1908-1.png 256000 1
+```
+
+where
+
+```
+python path-to-mosaic_from_image.py path-to-input-png-file number-of-points-in-voronoi-diagram chunk-size
+```
+
+
 ```
 $ source env/bin/activate
 $ python python/python/voronoi4g.py

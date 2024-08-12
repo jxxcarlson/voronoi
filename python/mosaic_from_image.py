@@ -208,9 +208,9 @@ def plot_voronoi_color(points, colors, size, aspect_ratio, svg_output_path, png_
                 # r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, 1)]
                 # edge_color = svgwrite.rgb(r, g, b)
                 # dwg.add(dwg.line(start=start, end=end, stroke=edge_color, stroke_width=0.5))
-                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, 0.5)]
+                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, 1)]
                 edge_color = svgwrite.rgb(r, g, b)
-                dwg.add(dwg.line(start=start, end=end, stroke=edge_color, stroke_width=0.1))
+                dwg.add(dwg.line(start=start, end=end, stroke=edge_color, stroke_width=0.5))
 
 
     # # Plot Voronoi edges
