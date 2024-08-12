@@ -195,7 +195,7 @@ def plot_voronoi_color(points, colors, size, aspect_ratio, svg_output_path, png_
                 dwg.add(dwg.polygon(points=polygon, fill=color, stroke=color, stroke_width=0.5))
 
 
-     # Plot Voronoi edges with colors
+    # Plot Voronoi edges with colors
     for simplex, ridge_points in zip(vor.ridge_vertices, vor.ridge_points):
         if -1 not in simplex:
             start = vor.vertices[simplex[0]]
@@ -205,9 +205,12 @@ def plot_voronoi_color(points, colors, size, aspect_ratio, svg_output_path, png_
                 region1, region2 = ridge_points
                 # Use the color of the first region
                 h, s, v = region_colors.get(vor.point_region[region1], (0, 0, 1))
-                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, 1)]
+                # r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, 1)]
+                # edge_color = svgwrite.rgb(r, g, b)
+                # dwg.add(dwg.line(start=start, end=end, stroke=edge_color, stroke_width=0.5))
+                r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h, s, 0.5)]
                 edge_color = svgwrite.rgb(r, g, b)
-                dwg.add(dwg.line(start=start, end=end, stroke=edge_color, stroke_width=0.5))
+                dwg.add(dwg.line(start=start, end=end, stroke=edge_color, stroke_width=0.1))
 
 
     # # Plot Voronoi edges
@@ -277,28 +280,30 @@ def main(file_path, n_voronoi_cells, chunk_size):
 
     # Chunk the HSB matrix with a chunk size of 128x128
     # chunk_size = 32
-    chunked_hsb_matrix = chunk_hsb_matrix(hsb_matrix, chunk_size)
+    # chunked_hsb_matrix = chunk_hsb_matrix(hsb_matrix, chunk_size)
 
     # Print the shape of the chunked HSB matrix
-    print(f"Shape of chunked HSB matrix: {chunked_hsb_matrix.shape}")
+    # print(f"Shape of chunked HSB matrix: {chunked_hsb_matrix.shape}")
 
     # Save the chunked HSB matrix as a PNG
-    png_output_path = image_out_prefix + '/' + file_name + '_chunked.png'
-    hsb_matrix_to_png(chunked_hsb_matrix, png_output_path, upscale_factor=chunk_size)
+    # png_output_path = image_out_prefix + '/' + file_name + '_chunked.png'
+    # hsb_matrix_to_png(chunked_hsb_matrix, png_output_path, upscale_factor=chunk_size)
 
     # Generate random points
     N = n_voronoi_cells
     size = 1000  # Width of the rectangle R
-    random_points, random_points_colors = generate_random_points_with_color(chunked_hsb_matrix, N, size, lambda x: x)
+    random_points, random_points_colors = generate_random_points_with_color(hsb_matrix, N, size, lambda x: x)
+    # random_points, random_points_colors = generate_random_points_with_color(chunked_hsb_matrix, N, size, lambda x: x)
+
 
     # Calculate aspect ratio
-    aspect_ratio = chunked_hsb_matrix.shape[1] / chunked_hsb_matrix.shape[0]
+    aspect_ratio = hsb_matrix.shape[1] / hsb_matrix.shape[0]
 
     # Generate SVG Voronoi diagram
-    print("Creating Voronoi diagram (svg)...")
-    svg_output_path = image_out_prefix + '/' + file_name + '_voronoi.svg'
-    png_output_path = image_out_prefix + '/' + file_name + '_voronoi.png'
-    voronoi_to_svg(random_points, size, aspect_ratio, svg_output_path, png_output_path)
+    # print("Creating Voronoi diagram (svg)...")
+    # svg_output_path = image_out_prefix + '/' + file_name + '_voronoi.svg'
+    # png_output_path = image_out_prefix + '/' + file_name + '_voronoi.png'
+    # voronoi_to_svg(random_points, size, aspect_ratio, svg_output_path, png_output_path)
 
     # Create and save colored Voronoi diagram as SVG
     print("Creating colored Voronoi diagram (svg)...")
